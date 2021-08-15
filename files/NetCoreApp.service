@@ -1,0 +1,14 @@
+[Unit]
+Description=netcore app
+
+[Service]
+Type=notify
+ExecStart=/srv/netcore-app/netcore-app
+SyslogIdentifier=NetCoreApp
+User=ec2-user
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

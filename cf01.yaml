@@ -1,0 +1,580 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CloudProject07:01
+
+Parameters:
+
+  Stack1Parameter:
+    Type: String
+    Description: Stack name (LOWERCASE ONLY)
+
+  VPCRegionParameter:
+    Type: String
+    Description: VPC Region
+
+  CidrBlockParameter:
+    Type: String
+    Description: VPC CIDR Block
+
+  AZ1Parameter:
+    Type: String
+    Description: Availability Zone 1
+
+  CidrBlockPub1Parameter:
+    Type: String
+    Description: Public Subnet 1 CIDR Block
+
+  CidrBlockPri1Parameter:
+    Type: String
+    Description: Private Subnet 1 CIDR Block
+
+  AZ2Parameter:
+    Type: String
+    Description: Availability Zone 2
+
+  CidrBlockPub2Parameter:
+    Type: String
+    Description: Public Subnet 2 CIDR Block
+
+  CidrBlockPri2Parameter:
+    Type: String
+    Description: Private Subnet 2 CIDR Block
+
+  FlowlogBucketParameter:
+    Type: String
+    Description: Flowlogs S3 Bucket Name
+
+  FlowlogBucketARNParameter:
+    Type: String
+    Description: Flowlogs S3 Bucket ARN
+
+Resources:
+
+  ###############
+  # VPC & SUBNETS
+  ###############
+
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref CidrBlockParameter
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub 'VPC ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Ref AZ1Parameter
+      CidrBlock: !Ref CidrBlockPub1Parameter
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'PublicSubnet1 ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Ref AZ1Parameter
+      CidrBlock: !Ref CidrBlockPri1Parameter
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub 'PrivateSubnet1 ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Ref AZ2Parameter
+      CidrBlock: !Ref CidrBlockPub2Parameter
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'PublicSubnet2 ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Ref AZ2Parameter
+      CidrBlock: !Ref CidrBlockPri2Parameter
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub 'PrivateSubnet2 ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  ##################
+  # INTERNET GATEWAY
+  ##################
+  
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub 'IGW ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+
+  IGWAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  ##############
+  # ROUTE TABLES
+  ##############
+  
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'PublicRT ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet1RTAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RTAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'PrivateRT ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+
+  PrivateSubnet1RTAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RTAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  #################
+  # SECURITY GROUPS
+  #################
+
+  SecurityGroupEfs:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EFS security group
+      GroupName: SecurityGroupEfs
+      SecurityGroupEgress:
+      - IpProtocol: "-1"
+        FromPort: 1
+        ToPort: 65000
+        CidrIp:  !Ref CidrBlockParameter
+      SecurityGroupIngress:
+      - IpProtocol: "tcp"
+        FromPort: 2049
+        ToPort: 2049
+        CidrIp:  !Ref CidrBlockParameter
+      Tags:
+      - Key: Name
+        Value: !Sub 'SG-EFS ${AWS::StackName}'
+      - Key: Lab
+        Value: cloudproject07
+      VpcId: !Ref VPC
+
+  SecurityGroupWebPublic:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: security group web public
+      GroupName: SecurityGroupWebPublic
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 1
+          ToPort: 65000
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub 'SG-WebPublic ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  SecurityGroupWebPrivate:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: security group web private
+      GroupName: SecurityGroupWebPrivate
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 1
+          ToPort: 65000
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref CidrBlockParameter
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref CidrBlockParameter
+      Tags:
+        - Key: Name
+          Value: !Sub 'SG-WebPrivate ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  SecurityGroupDB:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: security group DB
+      GroupName: SecurityGroupDB
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 1
+          ToPort: 65000
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref CidrBlockParameter
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: !Ref CidrBlockParameter
+      Tags:
+        - Key: Name
+          Value: !Sub 'SG-DB ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  SecurityGroupRedis:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: security group Redis
+      GroupName: SecurityGroupRedis
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 1
+          ToPort: 65000
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref CidrBlockParameter
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: !Ref CidrBlockParameter
+      Tags:
+        - Key: Name
+          Value: !Sub 'SG-Redis ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+      VpcId: !Ref VPC
+
+  ##############
+  # NETWORK ACLs
+  ##############
+  
+  SubnetPrivateAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'NACL-Private ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+
+  SubnetPrivateAclEgressEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref SubnetPrivateAcl
+      RuleNumber: 100
+      RuleAction: allow
+      Protocol: "-1"
+      Egress: true
+      CidrBlock: !Ref CidrBlockParameter
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: 1
+        To: 65535
+
+  SubnetPrivateAclIngressEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref SubnetPrivateAcl
+      RuleNumber: 100
+      RuleAction: allow
+      Protocol: 6
+      Egress: false
+      CidrBlock: !Ref CidrBlockParameter
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: 1
+        To: 65535
+
+  SubnetPrivate1AclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      NetworkAclId: !Ref SubnetPrivateAcl
+
+  SubnetPrivate2AclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      NetworkAclId: !Ref SubnetPrivateAcl
+
+  SubnetPublicAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'NACL-Public ${AWS::StackName}'
+        - Key: Lab
+          Value: cloudproject07
+
+  SubnetPublicAclEgressEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref SubnetPublicAcl
+      RuleNumber: 150
+      RuleAction: allow
+      Protocol: "-1"
+      Egress: true
+      CidrBlock: "0.0.0.0/0"
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: 1
+        To: 65535
+
+  SubnetPublicAclIngressEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref SubnetPublicAcl
+      RuleNumber: 100
+      RuleAction: allow
+      Protocol: 6
+      Egress: false
+      CidrBlock: "0.0.0.0/0"
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: 1
+        To: 65535
+
+  SubnetPublic1AclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      NetworkAclId: !Ref SubnetPublicAcl
+
+  SubnetPublic2AclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      NetworkAclId: !Ref SubnetPublicAcl
+
+  ##################
+  # VPC NETWORK LOGS
+  ##################
+
+  LogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Ref FlowlogBucketParameter
+
+  S3BucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref LogBucket
+      PolicyDocument: 
+        Statement: 
+          - Action:
+              - "s3:ListBucket"
+            Effect: "Allow"
+            Resource: 
+              - !Ref FlowlogBucketARNParameter
+            Principal: "*"
+          - Action: 
+              - "s3:PutObject"
+            Effect: "Allow"
+            Resource: 
+              - !Sub
+                - ${FlowlogARN}/*
+                - { FlowlogARN: !Ref FlowlogBucketARNParameter }
+            Principal: 
+              Service: "delivery.logs.amazonaws.com"
+          - Action: 
+              - "s3:GetBucketAcl"
+            Effect: "Allow"
+            Resource: 
+              - !Ref FlowlogBucketARNParameter
+            Principal: 
+              Service: "delivery.logs.amazonaws.com"
+
+  FlowLog:
+    DependsOn: LogBucket
+    Type: AWS::EC2::FlowLog
+    Properties: 
+      LogDestination: !Ref FlowlogBucketARNParameter
+      LogDestinationType: s3
+      MaxAggregationInterval: 600
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      TrafficType: ALL
+
+  DNSZone:
+    Type: 'AWS::Route53::HostedZone'
+    Properties:
+      HostedZoneConfig:
+        Comment: Private zone
+      Name: !Sub '${AWS::StackName}.net'
+      VPCs:
+        - VPCId: !Ref VPC
+          VPCRegion: !Ref VPCRegionParameter
+      HostedZoneTags:
+        - Key: Lab
+          Value: cloudproject07
+          
+Outputs:
+
+  CidrBlock:
+    Description: VPC CIDR block
+    Value: !Ref CidrBlockParameter
+    Export:
+      Name: !Sub '${AWS::StackName}-CidrBlock'
+
+  VpcID:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+
+  PublicSubnet1ID:
+    Description: Public Subnet 1 ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1Id'
+
+  PublicSubnet2ID:
+    Description: Public Subnet 2 ID
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2Id'
+
+  PrivateSubnet1ID:
+    Description: Private Subnet 1 ID
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1Id'
+
+  PrivateSubnet2ID:
+    Description: Private Subnet 2 ID
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2Id'
+
+  SecurityGroupEfsID:
+    Description: Security Group EFS ID
+    Value: !Ref SecurityGroupEfs
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-EfsId'
+
+  SecurityGroupWebPublicID:
+    Description: Security Group Web Public ID
+    Value: !Ref SecurityGroupWebPublic
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-WebPublicId'
+
+  SecurityGroupWebPrivateID:
+    Description: Security Group Web Private ID
+    Value: !Ref SecurityGroupWebPrivate
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-WebPrivateId'
+
+  SecurityGroupDbID:
+    Description: Security Group DB ID
+    Value: !Ref SecurityGroupDB
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-DbId'
+
+  SecurityGroupRedisID:
+    Description: Security Group Redis ID
+    Value: !Ref SecurityGroupRedis
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-RedisId'
+      
+  DNSZoneID:
+    Description: DNS Zone ID
+    Value: !Ref DNSZone
+    Export:
+      Name: !Sub '${AWS::StackName}-DNSZoneId'
+
+  DomainName:
+    Description: Private domain name
+    Value: !Sub '${AWS::StackName}.net'
+    Export:
+      Name: !Sub '${AWS::StackName}-DomainName'
+

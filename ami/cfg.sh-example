@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# GLOBAL VARS
+# Details of VPC where you want to build AMI images.
+# Not necessarily the same VPC as where images will be deployed.
+
+REGION="ap-southeast-1"
+VPCID="vpc-12345678abcdefgh"
+VPC_CIDR="172.31.0.0/16" 
+SUBNETID="subnet-12345678abcdefgh" 
+KEYNAME="ssh-keyname"
+GROUP="sg-12345678abcdefgh" # see mkamisg.sh
+
+# SERVER ROLES
+# Allow an instance to update Route53 with its public IP address
+ARNROUTE53="arn:aws:iam::123456789123:instance-profile/EC2Route53Upsert"
+# Allow an instance to read config data from S3 bucket
+ARNREADS3CF="arn:aws:iam::123456789123:instance-profile/EC2ReadS3CF"
+
+# Get latest Amazon Linux 2 AMI ID
+IMAGEID=$(aws ssm get-parameters \
+  --region $REGION \
+  --names '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2' \
+  --query 'Parameters[0].[Value]' \
+  --output text)
