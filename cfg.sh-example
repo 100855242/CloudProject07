@@ -1,19 +1,29 @@
 #!/bin/sh
 
+# The action passed in from the CLI - create, update or delete
 ACTION=$1
+
+# The AWS region 
 REGION="ap-southeast-2"
 
-# These are used by the stopstart.sh script
-INSTANCE_DB="i-abcdefghi12345678"
-INSTANCE_REDIS="i-abcdefghi12345678"
-INSTANCE_NGINX="i-abcdefghi12345678"
-INSTANCE_CLOUD9="i-abcdefghi12345678"
+# SSH key for EC2 instances (keyname without ".pem")
+EC2KeyParameter="testkey"
+
+# Nginx AMI image ID
+NginxAmiId="ami-abcdefgh12345678"
+
+# Database details
+DBUsername='dbuser'
+DBPassword='dbpass'
+DBName="dbname"
+DBSql="s3://bucket.name/db.sql"
+DBWriterDNS="db.abcdefghijkl.ap-southeast-2.rds.amazonaws.com"
 
 #######################################
 # cf01.yaml: VPC
 #######################################
-Stack1Parameter="moodleproject" # lowercase
-VPCRegionParameter="$REGION"
+Stack1Parameter="projectname" # lowercase
+VPCRegionParameter="${REGION}"
 CidrBlockParameter="172.26.0.0/24"
 AZ1Parameter="${REGION}a"
 CidrBlockPub1Parameter="172.26.0.0/27"
@@ -21,66 +31,46 @@ CidrBlockPri1Parameter="172.26.0.32/27"
 AZ2Parameter="${REGION}b"
 CidrBlockPub2Parameter="172.26.0.64/27"
 CidrBlockPri2Parameter="172.26.0.96/27"
-FlowlogBucketParameter="${Stack1Parameter}.example.net"
+FlowlogBucketParameter="${Stack1Parameter}.flowlogs"
 FlowlogBucketARNParameter="arn:aws:s3:::${FlowlogBucketParameter}"
 
 #######################################
-# cf02.yaml: EFS
+# cf02.yaml: S3 static hosting bucket
 #######################################
-Stack2Parameter="moodleproject2"
+Stack2Parameter="projectname2"
+HostingBucketParameter="example.com.au"
+HostingBucketARNParameter="arn:aws:s3:::${FilesBucketParameter}"
+
+#######################################
+# cf03.yaml: S3 file storage bucket
+#######################################
+Stack3Parameter="projectname3"
+FilesBucketParameter="${Stack1Parameter}.files"
+FilesBucketARNParameter="arn:aws:s3:::${FilesBucketParameter}"
+
+#######################################
+# cf04.yaml: EC2 web server instance
+#######################################
+Stack4Parameter="projectname4"
+NginxAZParameter="AZ1Parameter"
+NginxTypeParameter="t2.micro"
+
+#######################################
+# cf05.yaml: EFS Filesystem
+#######################################
+Stack5Parameter="projectname5"
 MountTarget1Parameter="172.26.0.62"
 MountTarget2Parameter="172.26.0.126"
 
 #######################################
-# cf03.yaml: EC2 Database
+# cf06.yaml: Cloud9 admin machine
 #######################################
-Stack3Parameter="moodleproject3"
-DbIPParameter="172.26.0.101"
-DbAMIParameter="ami-0f29af7a185e3c653"
-DbKeyParameter="ssh-keyname"
-DbType="t2.medium"
+Stack6Parameter="projectname6"
 
 #######################################
-# cf04.yaml: RDS Database
+# cf07.yaml: ELB + Autoscaling
 #######################################
-Stack4Parameter="moodleproject4"
-DBUsername='moodleuser'
-DBPassword='moodlepass'
-DBName="moodledb"
-DBSql="s3://moodle.db.net/db.sql"
-DBWriterDNS="moodledb2.abcdefghijkl.ap-southeast-2.rds.amazonaws.com"
-
-#######################################
-# cf05.yaml: EC2 Redis
-#######################################
-Stack5Parameter="moodleproject5"
-RedisAMIParameter="ami-abcdefghijkl1234"
-RedisIPParameter="172.26.0.102"
-RedisKeyParameter="ssh-keyname"
-RedisTypeParameter="t2.micro"
-
-#######################################
-# cf06.yaml: Elasticache Redis
-#######################################
-Stack6Parameter="moodleproject6"
-
-#######################################
-# cf07.yaml: Nginx Test Instance
-#######################################
-Stack7Parameter="moodleproject7"
-NginxAMIParameter="ami-abcdefghijkl1234"
-NginxKeyParameter="ssh-keyname"
-NginxTypeParameter="t2.micro"
-
-#######################################
-# cf08.yaml: Nginx Autoscale Group
-#######################################
-Stack8Parameter="moodleproject8"
-AMIParameter="ami-abcdefghijkl1234"
-KeynameParameter="ssh-keyname"
+Stack7Parameter="projectname7"
+AMIParameter=$NginxAmiId
+KeynameParameter=$EC2KeyParameter
 CPUPolicyParameter="50"
-
-#######################################
-# cf09.yaml: Cloud9
-#######################################
-Stack9Parameter="moodleproject9"

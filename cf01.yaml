@@ -50,10 +50,12 @@ Parameters:
 
 Resources:
 
-  ###############
+  ##############################################################
   # VPC & SUBNETS
-  ###############
-
+  ##############################################################
+  # Build VPC containing two public and two private subnets 
+  # distributed across two Availability Zones.
+  
   VPC:
     Type: 'AWS::EC2::VPC'
     Properties:
@@ -119,9 +121,11 @@ Resources:
           Value: cloudproject07
       VpcId: !Ref VPC
 
-  ##################
+  ##############################################################
   # INTERNET GATEWAY
-  ##################
+  ##############################################################
+  # Create an Internet Gateway (path to the internet for incoming 
+  # and outgoing traffic.
   
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
@@ -138,10 +142,12 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
-  ##############
+  ##############################################################
   # ROUTE TABLES
-  ##############
-  
+  ##############################################################
+  # Public and private route tables. Direct internet traffic to
+  # Internet Gateway, keep local traffic local. 
+
   PublicRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -193,9 +199,11 @@ Resources:
       SubnetId: !Ref PrivateSubnet2
       RouteTableId: !Ref PrivateRouteTable
 
-  #################
+  ##############################################################
   # SECURITY GROUPS
-  #################
+  ##############################################################
+
+  # Allow access to EFS file shares from local private network only.
 
   SecurityGroupEfs:
     Type: AWS::EC2::SecurityGroup
@@ -205,7 +213,7 @@ Resources:
       SecurityGroupEgress:
       - IpProtocol: "-1"
         FromPort: 1
-        ToPort: 65000
+        ToPort: 65535
         CidrIp:  !Ref CidrBlockParameter
       SecurityGroupIngress:
       - IpProtocol: "tcp"
@@ -219,6 +227,10 @@ Resources:
         Value: cloudproject07
       VpcId: !Ref VPC
 
+  # Allow access to HTTP (port 80) from the internet, and SSH (port 22) 
+  # from the local private network. This SG is intended for testing web
+  # servers destined to become custom AMI images.
+
   SecurityGroupWebPublic:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -227,13 +239,13 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: '-1'
           FromPort: 1
-          ToPort: 65000
+          ToPort: 65535
           CidrIp: 0.0.0.0/0
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref CidrBlockParameter
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
@@ -245,6 +257,10 @@ Resources:
           Value: cloudproject07
       VpcId: !Ref VPC
 
+  # Security group for web servers running in a private subnet
+  # behind a load-balancer. Accepts connections to HTTP port 80
+  # from local network only.
+  
   SecurityGroupWebPrivate:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -253,8 +269,8 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: '-1'
           FromPort: 1
-          ToPort: 65000
-          CidrIp: 0.0.0.0/0
+          ToPort: 65535
+          CidrIp: !Ref CidrBlockParameter
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
@@ -271,6 +287,11 @@ Resources:
           Value: cloudproject07
       VpcId: !Ref VPC
 
+  # Database security group. 
+  # Allows incoming TCP ports 1433 (MSSql), 3306 (MariaDB/MySQL) 
+  # and 5432 (PostgreSQL) from private network.
+  # Allows outgoing to anywhere on private network.
+
   SecurityGroupDB:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -280,7 +301,7 @@ Resources:
         - IpProtocol: '-1'
           FromPort: 1
           ToPort: 65000
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref CidrBlockParameter
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
@@ -297,36 +318,13 @@ Resources:
           Value: cloudproject07
       VpcId: !Ref VPC
 
-  SecurityGroupRedis:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: security group Redis
-      GroupName: SecurityGroupRedis
-      SecurityGroupEgress:
-        - IpProtocol: '-1'
-          FromPort: 1
-          ToPort: 65000
-          CidrIp: 0.0.0.0/0
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref CidrBlockParameter
-        - IpProtocol: tcp
-          FromPort: 6379
-          ToPort: 6379
-          CidrIp: !Ref CidrBlockParameter
-      Tags:
-        - Key: Name
-          Value: !Sub 'SG-Redis ${AWS::StackName}'
-        - Key: Lab
-          Value: cloudproject07
-      VpcId: !Ref VPC
-
-  ##############
+  ##############################################################
   # NETWORK ACLs
-  ##############
-  
+  ##############################################################
+  # Network Access Control Lists. Stateless subnet-level packet 
+  # filtering allowing all traffic in/out in public subnets, and
+  # all local traffic in/out in private subnets.
+ 
   SubnetPrivateAcl:
     Type: AWS::EC2::NetworkAcl
     Properties:
@@ -435,10 +433,13 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       NetworkAclId: !Ref SubnetPublicAcl
 
-  ##################
+  ##############################################################
   # VPC NETWORK LOGS
-  ##################
-
+  ##############################################################
+  # Create an S3 bucket to hold network log files.
+  # Configure access policy on logs bucket.
+  # Enable VPC-level logging.
+  
   LogBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
@@ -456,7 +457,8 @@ Resources:
             Effect: "Allow"
             Resource: 
               - !Ref FlowlogBucketARNParameter
-            Principal: "*"
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:user/admin
           - Action: 
               - "s3:PutObject"
             Effect: "Allow"
@@ -484,6 +486,13 @@ Resources:
       ResourceId: !Ref VPC
       ResourceType: VPC
       TrafficType: ALL
+
+  ##############################################################
+  # DNS PRIVATE ZONE
+  ##############################################################
+  # Create a private DNS zone for network-internal use, based on
+  # the stack name. Enables IP addresses to be decoupled from 
+  # specific services.
 
   DNSZone:
     Type: 'AWS::Route53::HostedZone'
@@ -560,12 +569,6 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-SG-DbId'
 
-  SecurityGroupRedisID:
-    Description: Security Group Redis ID
-    Value: !Ref SecurityGroupRedis
-    Export:
-      Name: !Sub '${AWS::StackName}-SG-RedisId'
-      
   DNSZoneID:
     Description: DNS Zone ID
     Value: !Ref DNSZone

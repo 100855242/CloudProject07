@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: CloudProject07:06
+
+Parameters:
+
+  VPCStackParameter:
+    Type: String
+    Description: "Name of VPC stack to build on"
+    
+Resources:
+
+  Cloud9Admin:
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties: 
+      AutomaticStopTimeMinutes: 30
+      Description: "CloudProject07 Cloud9 admin machine"
+      InstanceType: t2.micro
+      Name: !Sub "${VPCStackParameter}-Cloud9"
+      SubnetId: {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PublicSubnet1Id"}

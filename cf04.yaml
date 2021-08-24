@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CloudProject07:04
+
+Parameters:
+
+  VPCStackParameter:
+    Type: String
+    Description: "Name of VPC stack to build on"
+
+  VPCRegionParameter:
+    Type: String
+    Description: VPC Region
+
+  NginxAZParameter:
+    Type: String
+    Description: Nginx server Availability Zone
+
+  Amz2AmiIdParameter:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+  EC2KeyParameter:
+    Type: String
+    Description: "EC2 keypair"
+
+  NginxTypeParameter:
+    Type: String
+    Description: "Nginx server instance type"
+
+Resources:
+
+  EC2S3Profile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: EC2S3Profile
+      Roles:
+        - FilesBucketRole
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: Delete
+    Properties: 
+      AvailabilityZone: !Ref NginxAZParameter
+      ImageId: !Ref Amz2AmiIdParameter
+      InstanceType: !Ref NginxTypeParameter
+      KeyName: !Ref EC2KeyParameter
+      Monitoring: True
+      NetworkInterfaces:
+      - DeviceIndex: 0
+        SubnetId: {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PublicSubnet1Id"}
+        GroupSet:
+          - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-SG-WebPublicId"}
+      UserData:
+        !Base64 |
+        #!/bin/bash
+        yum update -y
+        rpm --import https://packages.microsoft.com/keys/microsoft.asc
+        rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+        amazon-linux-extras enable nginx1
+        yum clean metadata
+        yum install -y git amazon-efs-utils nginx
+        yum install -y aspnetcore-runtime-3.1 dotnet-sdk-3.1
+        yum install -y libunwind mssql-cli unixODBC-devel
+        systemctl enable nginx
+        systemctl start nginx
+      IamInstanceProfile: "EC2S3Profile"
+      Tags: 
+      - Key: Name
+        Value: !Sub '${VPCStackParameter}-NginxServerForAMI'
+    DependsOn: EC2S3Profile 
+
+
+Outputs:
+
+  EC2S3ProfileArn:
+    Description: EC2S3ProfileArn
+    Value: !GetAtt EC2S3Profile.Arn
+    Export:
+      Name: !Sub '${VPCStackParameter}-EC2S3Arn'

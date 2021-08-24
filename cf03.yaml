@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CloudProject07:03
+
+Parameters:
+
+  VPCStackParameter:
+    Type: String
+    Description: "Name of VPC stack to build on"
+
+  VPCRegionParameter:
+    Type: String
+    Description: VPC Region
+
+  FilesBucketParameter:
+    Type: String
+    Description: "General file storage S3 bucket"
+
+  FilesBucketARNParameter:
+    Type: String
+    Description: "Files bucket ARN"
+
+Resources:
+
+  # Create an S3 bucket for secure storage of files 
+  # which could include scripts, app code, SQL schemas
+  # and data, keys, etc.
+  # Accessible by services such as EC2 and Lambda. 
+   
+  FilesBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Ref FilesBucketParameter
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: KMS-KEY-ARN
+            BucketKeyEnabled: true
+
+  FilesBucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref FilesBucket
+      PolicyDocument: 
+        Statement: 
+          - Action:
+              - "s3:ListBucket"
+            Effect: "Allow"
+            Resource: 
+              - !Ref FilesBucketARNParameter
+            Principal: 
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:user/admin
+          - Action: 
+              - "s3:PutObject"
+              - "s3:GetObject"
+            Effect: "Allow"
+            Resource: 
+              - !Sub arn:aws:s3:::${FilesBucketParameter}/*
+            Principal: 
+              Service: 
+                - "ec2.amazonaws.com"
+                - "lambda.amazonaws.com"
+
+
+  # Role + policy to enable EC2 and Lambda to write (update) files
+  # to bucket. Assumed by services as needed.
+  FilesBucketRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: FilesBucketRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - ec2.amazonaws.com
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3FilesBucketWriteAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                  - s3:PutObject*
+                  - s3:DeleteObject*
+                Resource:
+                  - !Sub arn:aws:s3:::${FilesBucketParameter}
+                  - !Sub arn:aws:s3:::${FilesBucketParameter}/*

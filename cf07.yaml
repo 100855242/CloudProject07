@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: CloudProject07:07
+
+Parameters:
+
+  VPCStackParameter:
+    Type: String
+    Description: "Name of VPC stack to build on"
+
+  AMIParameter:
+    Type: String
+    Description: "Launch template AMI ID"
+
+  KeynameParameter:
+    Type: String
+    Description: "EC2 key name for autoscale instances"
+
+  CPUPolicyParameter:
+    Type: Number
+    Description: "CPU Policy threshold"
+
+Resources:
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: 'ipv4'
+      Name: !Sub '${VPCStackParameter}-LoadBalancer'
+      Type: 'application'
+      Scheme: 'internet-facing'
+      Subnets:
+        - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PublicSubnet1Id"}
+        - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PublicSubnet2Id"}
+      SecurityGroups:
+        - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-SG-WebPublicId"}
+      Tags:
+        - Key: project
+          Value: cloudproject07
+
+  ELBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  TargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: '200'
+      Name: !Sub '${VPCStackParameter}-TargetGroup'
+      Port: 80
+      Protocol: HTTP
+      TargetType: instance
+      VpcId: {"Fn::ImportValue" : !Sub "${VPCStackParameter}-VpcId"}
+      Tags:
+        - Key: project
+          Value: cloudproject07
+        
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        InstanceType: t2.micro
+        DisableApiTermination: 'true'
+        KeyName: !Sub ${KeynameParameter}
+        ImageId: !Sub ${AMIParameter}
+        IamInstanceProfile: 
+          Arn: {"Fn::ImportValue" : !Sub "${VPCStackParameter}-EC2S3Arn"}
+        SecurityGroupIds:
+          - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-SG-WebPrivateId"}
+      LaunchTemplateName: !Sub '${VPCStackParameter}-LaunchTemplate'
+
+  ServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: '2'
+      MaxSize: '2'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PrivateSubnet1Id"}
+        - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PrivateSubnet2Id"}
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub 'ASG ${VPCStackParameter}'
+          PropagateAtLaunch: "false"
+        - Key: project
+          Value: cloudproject07
+          PropagateAtLaunch: "true"
+
+  CPUPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ServerGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref CPUPolicyParameter

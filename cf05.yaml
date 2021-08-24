@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CloudProject07:05
+
+Parameters:
+
+  VPCStackParameter:
+    Type: String
+    Description: "Name of VPC stack to build on"
+
+  VPCRegionParameter:
+    Type: String
+    Description: VPC Region
+
+  MountTarget1Parameter:
+    Type: String
+    Description: "EFS Mount Target 1 IP Address"
+
+  MountTarget2Parameter:
+    Type: String
+    Description: "EFS Mount Target 2 IP Address"
+
+Resources:
+
+  # Create EFS filesystem with two mount targets 
+  # (one in each private subnet). Encrypted.
+   
+  EFSFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      FileSystemTags:
+        - Key: Lab
+          Value: cloudproject07
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub 
+            - EFS ${StackID}
+            - { StackID: !Ref VPCStackParameter }
+        - Key: Lab
+          Value: cloudproject07
+
+  EFSMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      IpAddress: !Ref MountTarget1Parameter 
+      SecurityGroups:
+        - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-SG-EfsId"}
+      SubnetId: {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PrivateSubnet1Id"}
+
+  EFSMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      IpAddress: !Ref MountTarget2Parameter 
+      SecurityGroups:
+        - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-SG-EfsId"}
+      SubnetId: {"Fn::ImportValue" : !Sub "${VPCStackParameter}-PrivateSubnet2Id"}
+
+Outputs:
+
+  EFSFilesystemID:
+    Description: EFS Filesystem ID
+    Value: !Ref EFSFileSystem
+    Export:
+      Name: !Sub "${VPCStackParameter}-EfsFilesystemId"
+
+  EFSMountTarget1:
+    Description: EFS Mount Target 1
+    Value: !GetAtt EFSMountTarget1.IpAddress
+    Export:
+      Name: !Sub "${VPCStackParameter}-EfsMountTarget1"
+
+  EFSMountTarget2:
+    Description: EFS Mount Target 2
+    Value: !GetAtt EFSMountTarget2.IpAddress
+    Export:
+      Name: !Sub "${VPCStackParameter}-EfsMountTarget2"

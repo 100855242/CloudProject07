@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CloudProject07:02
+
+Parameters:
+
+  VPCStackParameter:
+    Type: String
+    Description: "Name of VPC stack to build on"
+
+  VPCRegionParameter:
+    Type: String
+    Description: VPC Region
+
+  HostingBucketParameter:
+    Type: String
+    Description: "Web hosting S3 bucket name"
+
+  HostingBucketARNParameter:
+    Type: String
+    Description: "Web hosting bucket ARN"
+
+Resources:
+
+  HostingBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Ref HostingBucketParameter
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+
+  # Policy to make objects in bucket publicly readable. 
+  # Applied to bucket.
+  HostingBucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref HostingBucket
+      PolicyDocument: 
+        Statement: 
+          - Action: 
+              - "s3:GetObject"
+            Effect: "Allow"
+            Resource: 
+              - !Sub arn:aws:s3:::${HostingBucketParameter}/*
+            Principal: "*" 
+
+  # Role + policy to enable EC2 and Lambda to write (update) files
+  # to bucket. Assumed by services as needed.
+  HostingBucketRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: HostingBucketRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - ec2.amazonaws.com
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3HostingBucketWriteAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                  - s3:PutObject*
+                  - s3:DeleteObject*
+                Resource:
+                  - !Sub arn:aws:s3:::${HostingBucketParameter}
+                  - !Sub arn:aws:s3:::${HostingBucketParameter}/*
