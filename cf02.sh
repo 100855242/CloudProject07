@@ -9,14 +9,18 @@ if [ -z $ACTION ]; then
 elif [ $ACTION == 'create' ]; then
 
   aws cloudformation create-stack \
-        --stack-name $Stack2Parameter \
-        --template-body file://cf02.yaml \
+  --stack-name $Stack2Parameter \
+  --template-body file://cf02.yaml \
 	--parameters \
         ParameterKey=VPCStackParameter,ParameterValue=$Stack1Parameter \
         ParameterKey=VPCRegionParameter,ParameterValue=$VPCRegionParameter \
         ParameterKey=HostingBucketParameter,ParameterValue=$HostingBucketParameter \
         ParameterKey=HostingBucketARNParameter,ParameterValue=$HostingBucketARNParameter \
-        --region $REGION \
+        ParameterKey=DomainNameParameter,ParameterValue=$DomainNameParameter \
+        ParameterKey=CFHostedZoneIdParameter,ParameterValue=$CFHostedZoneIdParameter \
+        ParameterKey=S3DNSNameParameter,ParameterValue=$S3DNSNameParameter \
+        ParameterKey=WWWCertificateParameter,ParameterValue=$WWWCertificateArn \
+  --region $REGION \
 	--capabilities CAPABILITY_NAMED_IAM
 
 elif [ $ACTION == 'update' ]; then
@@ -29,6 +33,10 @@ elif [ $ACTION == 'update' ]; then
         ParameterKey=VPCRegionParameter,ParameterValue=$VPCRegionParameter \
         ParameterKey=HostingBucketParameter,ParameterValue=$HostingBucketParameter \
         ParameterKey=HostingBucketARNParameter,ParameterValue=$HostingBucketARNParameter \
+        ParameterKey=DomainNameParameter,ParameterValue=$DomainNameParameter \
+        ParameterKey=CFHostedZoneIdParameter,ParameterValue=$CFHostedZoneIdParameter \
+        ParameterKey=S3DNSNameParameter,ParameterValue=$S3DNSNameParameter \
+        ParameterKey=WWWCertificateParameter,ParameterValue=$WWWCertificateArn \
 	--region $REGION \
 	--capabilities CAPABILITY_NAMED_IAM
 

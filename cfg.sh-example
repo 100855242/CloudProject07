@@ -12,6 +12,23 @@ EC2KeyParameter="testkey"
 # Nginx AMI image ID
 NginxAmiId="ami-abcdefgh12345678"
 
+# Registered domain
+DomainName="example.com.au"
+HostedZoneId="Z12345678ABCDEFG"
+
+# S3 bucket DNS zone info
+# https://docs.aws.amazon.com/general/latest/gr/s3.html#s3_website_region_endpoints
+S3HostedZoneId="Z1ABCDEFGHIJKL"
+S3DNSName="www.example.com.au-ap-southeast-2.amazonaws.com"
+
+# CloudFront DNS zone info 
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-aliastarget.html
+CFHostedZoneId="Z2FDTNDATAQYW2"
+
+## Certificates
+WWWCertificateArn="arn:aws:acm:us-east-1:123456789012:certificate/abcdefgh-1234-1234-1234-abcdefghijkl"
+APICertificateArn="arn:aws:acm:us-east-1:123456789012:certificate/abcdefgh-1234-1234-1234-abcdefghijkl"
+
 # Database details
 DBUsername='dbuser'
 DBPassword='dbpass'
@@ -38,8 +55,11 @@ FlowlogBucketARNParameter="arn:aws:s3:::${FlowlogBucketParameter}"
 # cf02.yaml: S3 static hosting bucket
 #######################################
 Stack2Parameter="projectname2"
-HostingBucketParameter="example.com.au"
-HostingBucketARNParameter="arn:aws:s3:::${FilesBucketParameter}"
+DomainNameParameter="$DomainName"
+HostingBucketParameter="www.${DomainName}"
+HostingBucketARNParameter="arn:aws:s3:::${HostingBucketParameter}"
+S3HostedZoneIdParameter="$S3HostedZoneId"
+S3DNSNameParameter="$S3DNSName"
 
 #######################################
 # cf03.yaml: S3 file storage bucket

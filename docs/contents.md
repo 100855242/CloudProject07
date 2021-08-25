@@ -2,6 +2,7 @@
 
 * [Introduction](intro.md)
 * [Pre-requisites](reqs.md)
+* [Permissions](permissions.md)
 * [Building the project](build.md)
 * [Template 1](cf01.md) (cf01.yaml)
 * [Template 2](cf02.md) (cf02.yaml)
@@ -10,6 +11,7 @@
 * [Template 5](cf05.md) (cf05.yaml)
 * [Template 6](cf06.md) (cf06.yaml)
 * [Template 7](cf07.md) (cf07.yaml)
+* [Template 8](cf08.md) (cf08.yaml)
 * [Scripts](scripts.md)
 * [References](refs.md)
 
@@ -24,3 +26,4 @@
 | [cf05.yaml](cf05.md) | Create encrypted EFS filestorage with mount targets in each private subnet. A Security Group protecting the mount targets is created in ```cf01.sh```. This template is optional (depends on final architecture requirements). It is intended to provide shared storage for web application files. |
 | [cf06.yaml](cf06.md) | Create a Cloud9 management instance in the project VPC. |
 | [cf07.yaml](cf07.md) | Create load-balancer and configure autoscaling. |
+| [cf08.yaml](cf08.md) | Create TLS/SSL certificates. |

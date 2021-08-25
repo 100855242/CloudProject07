@@ -12,6 +12,10 @@ Parameters:
     Type: String
     Description: VPC Region
 
+  DomainNameParameter:
+    Type: String
+    Description: "Project domain name"
+    
   HostingBucketParameter:
     Type: String
     Description: "Web hosting S3 bucket name"
@@ -19,7 +23,19 @@ Parameters:
   HostingBucketARNParameter:
     Type: String
     Description: "Web hosting bucket ARN"
-
+    
+  CFHostedZoneIdParameter:
+    Type: String
+    Description: "CloudFront DNS Zone ID"
+    
+  S3DNSNameParameter:
+    Type: String
+    Description: "S3 bucket DNS name"
+    
+  WWWCertificateParameter:
+    Type: String
+    Description: "WWW certificate ARN"
+    
 Resources:
 
   HostingBucket:
@@ -76,3 +92,65 @@ Resources:
                 Resource:
                   - !Sub arn:aws:s3:::${HostingBucketParameter}
                   - !Sub arn:aws:s3:::${HostingBucketParameter}/*
+
+  CDNOriginIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "Cloudfront Origin identity for ${DomainNameParameter}"
+
+# Created cache policy manually as CloudFormation seems to be broken.
+# See https://console.aws.amazon.com/cloudfront/v3/home?#/policies
+#
+#  WWWCachePolicy:
+#    Type: AWS::CloudFront::CachePolicy
+#    Properties: 
+#      CachePolicyConfig: 
+#        DefaultTTL: 43200
+#        MaxTTL: 86400
+#        MinTTL: 300
+#        Name: "WWW Cache Policy"
+#        ParametersInCacheKeyAndForwardedToOrigin: 
+#          CookiesConfig: 
+#            CookieBehavior: 'none'
+#          EnableAcceptEncodingBrotli: true
+#          EnableAcceptEncodingGzip: true
+#          HeadersConfig: 
+#            HeaderBehavior: 'none'
+#          QueryStringsConfig: 
+#            QueryStringBehavior: 'none'
+
+  CDN:
+    Type: "AWS::CloudFront::Distribution"
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Ref HostingBucketParameter
+        DefaultCacheBehavior:
+          CachePolicyId: bb103da8-62f1-4d22-92e8-090ea357685f
+          #LambdaFunctionAssociations:
+          TargetOriginId: !Sub "S3-origin-${HostingBucket}"
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: True
+        Origins:
+          - DomainName: !GetAtt HostingBucket.RegionalDomainName
+            Id: !Sub "S3-origin-${HostingBucket}"
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CDNOriginIdentity}"
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          AcmCertificateArn: !Ref WWWCertificateParameter
+          MinimumProtocolVersion: TLSv1.2_2018
+          SslSupportMethod: sni-only
+
+  DNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Sub "${DomainNameParameter}."
+      RecordSets:
+        - AliasTarget:
+            DNSName: !GetAtt CDN.DomainName
+            HostedZoneId: !Ref CFHostedZoneIdParameter
+          Name: !Ref HostingBucketParameter
+          Type: A

@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CloudProject07:08
+
+Parameters:
+
+  DomainNameParameter:
+    Type: String
+    Description: "Project domain name"
+    
+  HostedZoneIdParameter:
+    Type: String
+    Description: "Domain zone ID"
+
+Resources:
+
+  WWWCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub 'www.${DomainNameParameter}'
+      # For non-Route 53 options, drop the DomainValidationOptions
+      DomainValidationOptions:
+        - DomainName: !Sub 'www.${DomainNameParameter}'
+          HostedZoneId: !Ref HostedZoneIdParameter
+      ValidationMethod: DNS
+
+  APICertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub 'api.${DomainNameParameter}'
+      # For non-Route 53 options, drop the DomainValidationOptions
+      DomainValidationOptions:
+        - DomainName: !Sub 'api.${DomainNameParameter}'
+          HostedZoneId: !Ref HostedZoneIdParameter
+      ValidationMethod: DNS
