@@ -12,6 +12,8 @@ The CloudFormation templates could be deployed manually in the AWS Web Managemen
 
 ## Repo structure
 
+| Item           | Contents |
+| -------------- | -------- |
 | cfg.sh-example | Configuration file template |
 | cfXX.sh        | Shell script wrappers for manageing CloudFormation templates |
 | cfXX.yaml      | CloudForamation templates in YAML format |

@@ -16,6 +16,8 @@ sh cf01.sh delete
 
 **2: cfg.sh**
 
+Basic configuration values for all shell scripts must be provided in ```cfg.sh```. Copy ```cfg.sh-example``` to ```cfg.sh``` and provide the required values.
+
 **3: cf01.sh**: Create VPC.
  
 **4: cf02.sh**: Create public S3 bucket for serving static web files. 
