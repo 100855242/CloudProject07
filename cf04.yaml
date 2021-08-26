@@ -22,7 +22,11 @@ Parameters:
 
   EC2KeyParameter:
     Type: String
-    Description: "EC2 keypair"
+    Description: "EC2 key name"
+
+  SSHKeyParameter:
+    Type: String
+    Description: "Git key pair name"
 
   NginxTypeParameter:
     Type: String
@@ -52,18 +56,30 @@ Resources:
         GroupSet:
           - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-SG-WebPublicId"}
       UserData:
-        !Base64 |
-        #!/bin/bash
-        yum update -y
-        rpm --import https://packages.microsoft.com/keys/microsoft.asc
-        rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
-        amazon-linux-extras enable nginx1
-        yum clean metadata
-        yum install -y git amazon-efs-utils nginx
-        yum install -y aspnetcore-runtime-3.1 dotnet-sdk-3.1
-        yum install -y libunwind mssql-cli unixODBC-devel
-        systemctl enable nginx
-        systemctl start nginx
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            yum update -y
+            rpm --import https://packages.microsoft.com/keys/microsoft.asc
+            rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+            amazon-linux-extras enable nginx1
+            yum clean metadata
+            yum install -y git amazon-efs-utils nginx
+            yum install -y aspnetcore-runtime-3.1 dotnet-sdk-3.1
+            yum install -y libunwind mssql-cli unixODBC-devel
+            systemctl enable nginx
+            systemctl start nginx
+        
+            echo "github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==" >> /home/ec2-user/.ssh/known_hosts
+            cat << EOF > /home/ec2-user/.ssh/config
+            Host github.com
+              HostName github.com
+              IdentityFile /home/ec2-user/.ssh/${SSHKeyParameter}
+            EOF
+            chmod 400 /home/ec2-user/.ssh/config
+            aws s3 cp s3://${VPCStackParameter}.files/gitpull.sh /home/ec2-user/gitpull.sh
+            chown -R ec2-user.ec2-user /home/ec2-user
+            
       IamInstanceProfile: "EC2S3Profile"
       Tags: 
       - Key: Name

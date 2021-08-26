@@ -6,10 +6,13 @@ ACTION=$1
 # The AWS region 
 REGION="ap-southeast-2"
 
-# SSH key for EC2 instances (keyname without ".pem")
+# SSH key for EC2 instance creation and access (keyname without ".pem")
 EC2KeyParameter="testkey"
 
-# Nginx AMI image ID
+# SSH key for Git access from EC2 instances (must be a key pair, not PEM file)
+SSHKeyParameter="id_rsa"
+
+# Nginx custom AMI image ID
 NginxAmiId="ami-abcdefgh12345678"
 
 # Registered domain
@@ -28,6 +31,8 @@ CFHostedZoneId="Z2FDTNDATAQYW2"
 ## Certificates
 WWWCertificateArn="arn:aws:acm:us-east-1:123456789012:certificate/abcdefgh-1234-1234-1234-abcdefghijkl"
 APICertificateArn="arn:aws:acm:us-east-1:123456789012:certificate/abcdefgh-1234-1234-1234-abcdefghijkl"
+WWWDevCertificateArn="arn:aws:acm:us-east-1:123456789012:certificate/abcdefgh-1234-1234-1234-abcdefghijkl"
+APIDevCertificateArn="arn:aws:acm:us-east-1:123456789012:certificate/abcdefgh-1234-1234-1234-abcdefghijkl"
 
 # Database details
 DBUsername='dbuser'

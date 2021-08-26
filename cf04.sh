@@ -16,6 +16,7 @@ elif [ $ACTION == 'create' ]; then
         ParameterKey=VPCRegionParameter,ParameterValue=$VPCRegionParameter \
         ParameterKey=NginxAZParameter,ParameterValue=$AZ1Parameter \
         ParameterKey=EC2KeyParameter,ParameterValue=$EC2KeyParameter \
+        ParameterKey=SSHKeyParameter,ParameterValue=$SSHKey \
         ParameterKey=NginxTypeParameter,ParameterValue=$NginxTypeParameter \
     --region $REGION \
 	--capabilities CAPABILITY_NAMED_IAM
@@ -30,6 +31,7 @@ elif [ $ACTION == 'update' ]; then
     ParameterKey=VPCRegionParameter,ParameterValue=$VPCRegionParameter \
     ParameterKey=NginxAZParameter,ParameterValue=$AZ1Parameter \
     ParameterKey=EC2KeyParameter,ParameterValue=$EC2KeyParameter \
+    ParameterKey=SSHKeyParameter,ParameterValue=$SSHKey \
     ParameterKey=NginxTypeParameter,ParameterValue=$NginxTypeParameter \
 	--region $REGION \
 	--capabilities CAPABILITY_NAMED_IAM

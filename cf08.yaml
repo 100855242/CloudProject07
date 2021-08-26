@@ -18,7 +18,6 @@ Resources:
     Type: AWS::CertificateManager::Certificate
     Properties:
       DomainName: !Sub 'www.${DomainNameParameter}'
-      # For non-Route 53 options, drop the DomainValidationOptions
       DomainValidationOptions:
         - DomainName: !Sub 'www.${DomainNameParameter}'
           HostedZoneId: !Ref HostedZoneIdParameter
@@ -28,8 +27,25 @@ Resources:
     Type: AWS::CertificateManager::Certificate
     Properties:
       DomainName: !Sub 'api.${DomainNameParameter}'
-      # For non-Route 53 options, drop the DomainValidationOptions
       DomainValidationOptions:
         - DomainName: !Sub 'api.${DomainNameParameter}'
+          HostedZoneId: !Ref HostedZoneIdParameter
+      ValidationMethod: DNS
+
+  WWWDevCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub 'wwwdev.${DomainNameParameter}'
+      DomainValidationOptions:
+        - DomainName: !Sub 'wwwdev.${DomainNameParameter}'
+          HostedZoneId: !Ref HostedZoneIdParameter
+      ValidationMethod: DNS
+
+  APIDevCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub 'apidev.${DomainNameParameter}'
+      DomainValidationOptions:
+        - DomainName: !Sub 'apidev.${DomainNameParameter}'
           HostedZoneId: !Ref HostedZoneIdParameter
       ValidationMethod: DNS
