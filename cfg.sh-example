@@ -99,3 +99,13 @@ Stack7Parameter="projectname7"
 AMIParameter=$NginxAmiId
 KeynameParameter=$EC2KeyParameter
 CPUPolicyParameter="50"
+
+#######################################
+# cf08.yaml: EC2 Database
+#######################################
+Stack8Parameter="projectname8"
+
+#######################################
+# cf09.yaml: EC2 Database
+#######################################
+Stack9Parameter="projectname9"

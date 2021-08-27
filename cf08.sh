@@ -9,7 +9,7 @@ if [ -z $ACTION ]; then
 elif [ $ACTION == 'create' ]; then
 
   aws cloudformation create-stack \
-    --stack-name Certificates \
+    --stack-name $Stack8Parameter \
     --template-body file://cf08.yaml \
     --parameters \
     ParameterKey=DomainNameParameter,ParameterValue=$DomainName \
@@ -19,7 +19,7 @@ elif [ $ACTION == 'create' ]; then
 elif [ $ACTION == 'update' ]; then
 
   aws cloudformation update-stack \
-    --stack-name Certificates \
+    --stack-name $Stack8Parameter \
     --template-body file://cf08.yaml \
     --parameters \
     ParameterKey=DomainNameParameter,ParameterValue=$DomainName \
@@ -29,7 +29,7 @@ elif [ $ACTION == 'update' ]; then
 elif [ $ACTION == 'delete' ]; then
 
   aws cloudformation delete-stack \
-        --stack-name Certificates \
+        --stack-name $Stack8Parameter \
         --region us-east-1
 
 else

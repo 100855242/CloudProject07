@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: CloudProject07:09
+
+Resources:
+
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: An API Gateway with a Lambda Integration
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Name: APICiCd
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: 'nrmh'
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt ApiGatewayIamRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaCiCdFunction.Arn}/invocations'
+      OperationName: 'nrmh'
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      ContentType: 'application/json'
+      RestApiId: !Ref ApiGatewayRestApi
+      Schema: {}
+
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment
+      Description: Lambda API Stage v0
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: 'v0'
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethod
+    Properties:
+      Description: Lambda CICD API Deployment
+      RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: 'Allow'
+            Principal:
+              Service:
+                - 'apigateway.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/'
+      Policies:
+        - PolicyName: LambdaAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt LambdaCiCdFunction.Arn
+
+  LambdaCiCdRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LambdaCiCdRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Path: /
+
+  LambdaCiCdFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LambdaCiCdFunction
+      Runtime: python3.7
+      Role: !GetAtt LambdaCiCdRole.Arn
+      Handler: lambda_function.lambda_handler
+      Code:
+        ZipFile: |
+          import boto3, json
+
+          def lambda_handler(event, context):
+    
+              client = boto3.client('ec2')
+              instDict=client.describe_instances(
+                  Filters=[{'Name':'tag:cicd','Values':['cicd1']}]
+              )
+
+              hostList=[]
+              for r in instDict['Reservations']:
+                  for inst in r['Instances']:
+                      hostList.append(inst['PublicIpAddress'])
+
+              #Invoke worker function for each IP address
+              client = boto3.client('lambda')
+              for host in hostList:
+                  print("Invoking worker_function on " + host)
+                  invokeResponse=client.invoke(
+                      FunctionName='CiCdWorker',
+                      InvocationType='Event',
+                      LogType='Tail',
+                      Payload='{"IP":"'+ host +'"}'
+                  )
+                  print(invokeResponse)
+
+              response = {
+                  "statusCode": 200,
+                  "headers": {},
+                  "body": json.dumps({"response": "LambdaCiCdFunction"})
+              }
+              return response
+      Description: Endpoint for GitHub action.

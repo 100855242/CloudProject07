@@ -78,6 +78,10 @@ Resources:
           Arn: {"Fn::ImportValue" : !Sub "${VPCStackParameter}-EC2S3Arn"}
         SecurityGroupIds:
           - {"Fn::ImportValue" : !Sub "${VPCStackParameter}-SG-WebPrivateId"}
+        ResourceType: instance
+          Tags: 
+            - Key: cicd
+              Value: cicd1
       LaunchTemplateName: !Sub '${VPCStackParameter}-LaunchTemplate'
 
   ServerGroup:

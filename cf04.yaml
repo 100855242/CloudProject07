@@ -84,6 +84,8 @@ Resources:
       Tags: 
       - Key: Name
         Value: !Sub '${VPCStackParameter}-NginxServerForAMI'
+      - Key: cicd
+        Value: cicd1
     DependsOn: EC2S3Profile 
 
 
