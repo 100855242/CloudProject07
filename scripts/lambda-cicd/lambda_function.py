@@ -1,13 +1,13 @@
 # https://aws.amazon.com/blogs/compute/scheduling-ssh-jobs-using-aws-lambda/
 # The execution role must have permissions to execute EC2 DescribeInstances and invoke Lambda functions (see trigger_policy.json).
 
-import boto3
+import boto3, json
 
 def lambda_handler(event, context):
     
     client = boto3.client('ec2')
     instDict=client.describe_instances(
-        Filters=[{'Name':'tag:Environment','Values':['CICD']}]
+        Filters=[{'Name':'tag:cicd','Values':['cicd1']}]
     )
 
     hostList=[]
@@ -27,6 +27,9 @@ def lambda_handler(event, context):
         )
         print(invokeResponse)
 
-    return{
-        'response' : hostList[0]
+    response = {
+        "statusCode": 200,
+        "headers": {},
+        "body": json.dumps({"response": "LambdaCiCdFunction"})
     }
+    return response

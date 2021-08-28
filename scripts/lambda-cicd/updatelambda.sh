@@ -2,5 +2,4 @@
 
 aws lambda update-function-code \
 	--function-name CiCdWorker \
-	--zip-file fileb://cicd_function.zip \
-	--profile project001
+	--zip-file fileb://worker_function.zip
