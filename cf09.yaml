@@ -2,6 +2,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Description: CloudProject07:09
 
+Parameters:
+
+  VPCStackParameter:
+    Type: String
+    Description: "Name of VPC stack to build on"
+
 Resources:
 
   ApiGatewayRestApi:
@@ -18,7 +24,7 @@ Resources:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
-      PathPart: 'nrmh'
+      PathPart: !Ref VPCStackParameter
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewayMethod:
@@ -35,7 +41,7 @@ Resources:
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaCiCdFunction.Arn}/invocations'
-      OperationName: 'nrmh'
+      OperationName: !Ref VPCStackParameter
       ResourceId: !Ref ApiGatewayResource
       RestApiId: !Ref ApiGatewayRestApi
 
@@ -89,6 +95,7 @@ Resources:
     Properties:
       RoleName: LambdaCiCdRole
       AssumeRolePolicyDocument:
+        Version: 2012-10-17
         Statement:
           - Action:
             - sts:AssumeRole
@@ -96,10 +103,18 @@ Resources:
             Principal:
               Service:
               - lambda.amazonaws.com
-        Version: 2012-10-17
+      Policies:
+        - PolicyName: LambdaInvokeFunction
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'lambda:InvokeFunction'
+                Resource: arn:aws:lambda:ap-southeast-2:277343857993:function:*
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AWSLambdaExecute
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
       Path: /
 
   LambdaCiCdFunction:
@@ -108,7 +123,7 @@ Resources:
       FunctionName: LambdaCiCdFunction
       Runtime: python3.7
       Role: !GetAtt LambdaCiCdRole.Arn
-      Handler: lambda_function.lambda_handler
+      Handler: index.lambda_handler
       Code:
         ZipFile: |
           import boto3, json
@@ -130,7 +145,7 @@ Resources:
               for host in hostList:
                   print("Invoking worker_function on " + host)
                   invokeResponse=client.invoke(
-                      FunctionName='CiCdWorker',
+                      FunctionName='LambdaWorkerFunction',
                       InvocationType='Event',
                       LogType='Tail',
                       Payload='{"IP":"'+ host +'"}'
@@ -140,7 +155,20 @@ Resources:
               response = {
                   "statusCode": 200,
                   "headers": {},
-                  "body": json.dumps({"response": "LambdaCiCdFunction"})
+                  "body": json.dumps({"response": "Ciao from LambdaCiCdFunction"})
               }
               return response
       Description: Endpoint for GitHub action.
+
+  LambdaWorkerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LambdaWorkerFunction
+      Runtime: python3.7
+      Role: !GetAtt LambdaCiCdRole.Arn
+      Handler: worker_function.lambda_handler
+      Timeout: 10
+      Code:
+        S3Bucket: !Sub '${VPCStackParameter}.files'
+        S3Key: worker_function.zip
+      Description: Worker function for LambdaCiCdFunction.

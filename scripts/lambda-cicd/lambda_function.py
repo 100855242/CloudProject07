@@ -5,7 +5,7 @@ import boto3, json
 
 def lambda_handler(event, context):
     
-    client = boto3.client('ec2')
+    client = boto3.client('ec2','ap-southeast-2')
     instDict=client.describe_instances(
         Filters=[{'Name':'tag:cicd','Values':['cicd1']}]
     )

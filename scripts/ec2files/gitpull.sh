@@ -1,16 +1,16 @@
 #!/bin/sh
 
 # Name of SSH key required to download Git repo
-KEYNAME="id_docker"
+KEYNAME="id_rsa"
 
 # Path to KEYNAME in S3 bucket (bucket name + directory/ies)
-KEYPATH="cicdkeys"
+BUCKET="nrmh.files"
 
 # URI to GitHub account
-GITREPO="git@github.com:mjhalldotorg"
+GITACCOUNT="git@github.com:mjhalldotorg"
 
 # Name of repo we're tracking
-REPONAME="cicd-private"
+REPONAME="cp07"
 
 # Local destination directory for repo files
 DESTDIR="/usr/share/nginx/html"
@@ -28,10 +28,10 @@ function update_code() {
 # Clone or update the repo we're tracking, then update web server files.
 if [ ! -d "/home/ec2-user/${REPONAME}" ]; then
 
-	aws s3 cp "s3://${KEYPATH}/${KEYNAME}" "/home/ec2-user/.ssh/${KEYNAME}"
+	aws s3 cp "s3://${BUCKET}/${KEYNAME}" "/home/ec2-user/.ssh/${KEYNAME}"
 	chmod 400 "/home/ec2-user/.ssh/${KEYNAME}"
 	
-	git clone "${GITREPO}/${REPONAME}.git"
+	git clone "${GITACCOUNT}/${REPONAME}.git"
 	cd ${REPONAME}
 	sudo update_code
 

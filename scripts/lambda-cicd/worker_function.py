@@ -5,9 +5,9 @@ def lambda_handler(event, context):
 
     s3_client = boto3.client('s3')
     #Download private key file from secure S3 bucket
-    s3_client.download_file('cicdkeys','cicdssh.pem', '/tmp/cicdssh.pem')
+    s3_client.download_file('nrmh.files','testkey.pem', '/tmp/testkey.pem')
 
-    k = paramiko.RSAKey.from_private_key_file("/tmp/cicdssh.pem")
+    k = paramiko.RSAKey.from_private_key_file("/tmp/testkey.pem")
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -17,7 +17,7 @@ def lambda_handler(event, context):
     print("Connected to " + host)
 
     commands = [
-        "aws s3 cp s3://cicdkeys/gitpull.sh /home/ec2-user/gitpull.sh",
+        #"aws s3 cp s3://cicdkeys/gitpull.sh /home/ec2-user/gitpull.sh",
         "chmod 700 /home/ec2-user/gitpull.sh",
         "/home/ec2-user/gitpull.sh"
     ]

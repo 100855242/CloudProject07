@@ -1,5 +1,7 @@
 #!/bin/sh
 
+cd /home/ec2-user/environment
+
 aws lambda update-function-code \
-	--function-name CiCdWorker \
+	--function-name LambdaWorkerFunction \
 	--zip-file fileb://worker_function.zip

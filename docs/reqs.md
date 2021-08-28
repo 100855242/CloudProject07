@@ -17,9 +17,13 @@ A device capable of running Bash shell scripts and the AWS CLI utility is requir
 
 A registered domain is required in order to properly implement the infrastructure.
 
-## EC2 keypair
+## EC2 key
 
-An SSH keypair must be created in EC2 in the appropriate region, and the private key saved to your local development machine. The key name must be included in ```cfg.sh``` (see below).
+An SSH keypair file (PEM format) must be created in EC2 in the appropriate region, and the private key saved to your local development machine. The key name must be included in ```cfg.sh``` (see below).
+
+## Git key
+
+An SSH keypair (eg. id_rsa and id_rsa.pub) must be created (on the Cloud9 machine being used to build the environment), with the public key being copied to any Git repos that are to be accessed, and the private key being copied to the private S3 files bucket.
 
 ## Cache policy
 
