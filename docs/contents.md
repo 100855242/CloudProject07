@@ -27,3 +27,5 @@
 | [cf06.yaml](cf06.md) | Create a Cloud9 management instance in the project VPC. |
 | [cf07.yaml](cf07.md) | Create load-balancer and configure autoscaling. |
 | [cf08.yaml](cf08.md) | Create TLS/SSL certificates. |
+| [cf09.yaml](cf09.md) | GitHub/Lambda CICD integrations. |
+| [cf??.yaml](cfXX.md) | SQL database. |
